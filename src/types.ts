@@ -12,10 +12,18 @@ export type TabState = {
   loading: boolean;
 };
 
+export type FindState = {
+  open: boolean;
+  query: string;
+  active: number;
+  total: number;
+};
+
 export type WindowState = {
   tabs: TabState[];
   canGoBack: boolean;
   canGoForward: boolean;
+  find: FindState;
 };
 
 export type PersistedWindow = {

@@ -1,13 +1,19 @@
 import { BaseWindow, Menu, app, shell } from "electron";
 import {
+  activateLastTab,
+  activateTabByIndex,
   closeActiveTab,
   configureSession,
   createWindow,
+  findNextInFocusedWindow,
+  findPrevInFocusedWindow,
   newTabInFocusedWindow,
+  openFindInFocusedWindow,
   persistNow,
   prepareQuit,
   registerIpc,
   reloadActiveTab,
+  reopenClosedTab,
   restoreWindows,
 } from "./windows";
 import { HOME_URL } from "./types";
@@ -37,6 +43,14 @@ app.on("before-quit", () => {
 });
 
 function buildMenu(): void {
+  const tabJumpItems: Electron.MenuItemConstructorOptions[] = [1, 2, 3, 4, 5, 6, 7, 8].map(
+    (n) => ({
+      label: `Tab ${n}`,
+      accelerator: `CmdOrCtrl+${n}`,
+      click: () => activateTabByIndex(n - 1),
+    })
+  );
+
   const template: Electron.MenuItemConstructorOptions[] = [
     ...(isMac
       ? [
@@ -70,6 +84,11 @@ function buildMenu(): void {
           click: () => createWindow(),
         },
         {
+          label: "Reopen Closed Tab",
+          accelerator: "CmdOrCtrl+Shift+T",
+          click: () => reopenClosedTab(),
+        },
+        {
           label: "Close Tab",
           accelerator: "CmdOrCtrl+W",
           click: () => closeActiveTab(),
@@ -94,6 +113,22 @@ function buildMenu(): void {
         { role: "copy" },
         { role: "paste" },
         { role: "selectAll" },
+        { type: "separator" },
+        {
+          label: "Find",
+          accelerator: "CmdOrCtrl+F",
+          click: () => openFindInFocusedWindow(),
+        },
+        {
+          label: "Find Next",
+          accelerator: "CmdOrCtrl+G",
+          click: () => findNextInFocusedWindow(),
+        },
+        {
+          label: "Find Previous",
+          accelerator: "CmdOrCtrl+Shift+G",
+          click: () => findPrevInFocusedWindow(),
+        },
       ],
     },
     {
@@ -115,7 +150,19 @@ function buildMenu(): void {
     },
     {
       label: "Window",
-      submenu: [{ role: "minimize" }, { role: "zoom" }, { role: "front" }],
+      submenu: [
+        { role: "minimize" },
+        { role: "zoom" },
+        { type: "separator" },
+        ...tabJumpItems,
+        {
+          label: "Last Tab",
+          accelerator: "CmdOrCtrl+9",
+          click: () => activateLastTab(),
+        },
+        { type: "separator" },
+        { role: "front" },
+      ],
     },
     {
       role: "help",

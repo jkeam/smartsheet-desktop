@@ -17,4 +17,9 @@ contextBridge.exposeInMainWorld("desktop", {
   duplicateTab: (id: string) => ipcRenderer.send("tabs:duplicate", id),
   moveToNewWindow: (id: string) => ipcRenderer.send("tabs:move-new-window", id),
   openInBrowser: (id: string) => ipcRenderer.send("tabs:open-in-browser", id),
+  openFind: () => ipcRenderer.send("find:open"),
+  closeFind: () => ipcRenderer.send("find:close"),
+  findQuery: (query: string) => ipcRenderer.send("find:query", query),
+  findNext: () => ipcRenderer.send("find:next"),
+  findPrev: () => ipcRenderer.send("find:prev"),
 });

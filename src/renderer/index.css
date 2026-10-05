@@ -49,6 +49,51 @@ body {
   -webkit-app-region: drag;
 }
 
+.find-bar {
+  position: fixed;
+  top: 52px;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px 0 78px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  -webkit-app-region: no-drag;
+}
+
+.find-bar[hidden] {
+  display: none;
+}
+
+.find-input {
+  flex: 1;
+  min-width: 120px;
+  max-width: 320px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 8px;
+  background: var(--tab-active);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+}
+
+.find-input:focus {
+  border-color: color-mix(in srgb, var(--text) 35%, var(--border));
+}
+
+.find-count {
+  min-width: 56px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
 .traffic-spacer {
   width: 78px;
   flex: none;

@@ -27,6 +27,24 @@
       <nav class="tabs" id="tabs" aria-label="Open items"></nav>
       <button class="icon-btn add" id="new-tab" title="New tab" aria-label="New tab">+</button>
     </header>
+    <div class="find-bar" id="find-bar" hidden>
+      <input
+        class="find-input"
+        id="find-input"
+        type="search"
+        placeholder="Find in page"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <span class="find-count" id="find-count"></span>
+      <button class="icon-btn" id="find-prev" title="Previous" aria-label="Previous match">
+        <svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 10l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="icon-btn" id="find-next" title="Next" aria-label="Next match">
+        <svg viewBox="0 0 16 16" width="14" height="14"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="icon-btn" id="find-close" title="Close" aria-label="Close find">×</button>
+    </div>
     <script type="module" src="./index.js"></script>
   </body>
 </html>

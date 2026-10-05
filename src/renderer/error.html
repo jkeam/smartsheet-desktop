@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'"
+    />
+    <title>Page failed to load</title>
+    <style>
+      :root {
+        --bg: #f5f5f5;
+        --text: #222;
+        --muted: #666;
+        --btn: #1a73e8;
+        --btn-text: #fff;
+        --btn-secondary: #e8e8e8;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #1f1f1f;
+          --text: #f2f2f2;
+          --muted: #b0b0b0;
+          --btn: #8ab4f8;
+          --btn-text: #111;
+          --btn-secondary: #3a3a3a;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        padding: 24px;
+      }
+      main {
+        max-width: 420px;
+        text-align: center;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 20px;
+        font-weight: 600;
+      }
+      p {
+        margin: 0 0 20px;
+        color: var(--muted);
+        word-break: break-all;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      button {
+        border: 0;
+        border-radius: 8px;
+        padding: 8px 14px;
+        font: inherit;
+        cursor: pointer;
+      }
+      #retry {
+        background: var(--btn);
+        color: var(--btn-text);
+      }
+      #open-browser {
+        background: var(--btn-secondary);
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>This page failed to load</h1>
+      <p id="detail">Check your connection, then try again.</p>
+      <div class="actions">
+        <button id="retry" type="button">Retry</button>
+        <button id="open-browser" type="button">Open in Browser</button>
+      </div>
+    </main>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const failedUrl = params.get("url") || "";
+      const errorCode = params.get("code") || "";
+      const detail = document.getElementById("detail");
+      if (failedUrl) {
+        detail.textContent = errorCode
+          ? failedUrl + " (" + errorCode + ")"
+          : failedUrl;
+      }
+      document.getElementById("retry").addEventListener("click", () => {
+        if (failedUrl) location.href = failedUrl;
+      });
+      document.getElementById("open-browser").addEventListener("click", () => {
+        if (!failedUrl) return;
+        const bridge = window.desktopTab;
+        if (bridge && typeof bridge.openExternal === "function") {
+          bridge.openExternal(failedUrl);
+        }
+      });
+    </script>
+  </body>
+</html>

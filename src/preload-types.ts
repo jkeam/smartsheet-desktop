@@ -9,16 +9,25 @@ type TabState = {
   loading: boolean;
 };
 
+type FindState = {
+  open: boolean;
+  query: string;
+  active: number;
+  total: number;
+};
+
 type WindowState = {
   tabs: TabState[];
   canGoBack: boolean;
   canGoForward: boolean;
+  find: FindState;
 };
 
 declare global {
   interface Window {
     desktop: {
       onState: (callback: (state: WindowState) => void) => void;
+      getState: () => Promise<WindowState>;
       newTab: (url?: string) => void;
       closeTab: (id: string) => void;
       activateTab: (id: string) => void;
@@ -30,6 +39,11 @@ declare global {
       duplicateTab: (id: string) => void;
       moveToNewWindow: (id: string) => void;
       openInBrowser: (id: string) => void;
+      openFind: () => void;
+      closeFind: () => void;
+      findQuery: (query: string) => void;
+      findNext: () => void;
+      findPrev: () => void;
     };
   }
 }

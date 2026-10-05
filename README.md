@@ -12,6 +12,8 @@ Not affiliated with Smartsheet Inc. If something breaks, the web app is still at
 - Persistent login via a dedicated Electron session partition
 - macOS dock badge from unread counts in tab titles
 - Drag-to-reorder tabs; right-click to duplicate, move to a new window, or open in the browser
+- Find in page; reopen closed tabs; failed loads show a retry page
+- Downloads save to `~/Downloads` with a completion notification
 
 ## Requirements
 
@@ -26,7 +28,7 @@ npm install
 npm start
 ```
 
-`npm run build` compiles TypeScript to `dist/` without launching Electron. `npm run dev` is an alias for `npm start`.
+`npm run build` compiles TypeScript to `dist/` without launching Electron. `npm run dev` is an alias for `npm start`. `npm test` runs URL-policy unit tests.
 
 ## macOS installer
 
@@ -43,15 +45,22 @@ Writes unsigned universal (Intel + Apple Silicon) installers to `release/`:
 
 Gatekeeper will warn on first open (right-click → Open) because these builds are not Apple-signed or notarized. The Dock icon is a generic grid mark, not Smartsheet branding.
 
+GitHub Actions (`.github/workflows/ci.yml`) runs tests/build on Ubuntu and produces the same unsigned DMG/PKG on `macos-latest` as workflow artifacts (`CSC_IDENTITY_AUTO_DISCOVERY=false`).
+
 ## Shortcuts
 
 | Action | Shortcut |
 | --- | --- |
 | New tab | `Cmd/Ctrl+T` |
+| Reopen closed tab | `Cmd/Ctrl+Shift+T` |
 | New window | `Cmd/Ctrl+N` |
 | Close tab | `Cmd/Ctrl+W` |
 | Reload | `Cmd/Ctrl+R` |
 | Cycle tabs | `Cmd/Ctrl+Tab` / `Cmd/Ctrl+Shift+Tab` |
+| Jump to tab 1–8 | `Cmd/Ctrl+1`–`8` |
+| Jump to last tab | `Cmd/Ctrl+9` |
+| Find | `Cmd/Ctrl+F` |
+| Find next / previous | `Cmd/Ctrl+G` / `Cmd/Ctrl+Shift+G` |
 | Open home | `Cmd/Ctrl+Shift+H` |
 
 ## License

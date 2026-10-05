@@ -7,10 +7,18 @@ type TabState = {
   loading: boolean;
 };
 
+type FindState = {
+  open: boolean;
+  query: string;
+  active: number;
+  total: number;
+};
+
 type WindowState = {
   tabs: TabState[];
   canGoBack: boolean;
   canGoForward: boolean;
+  find: FindState;
 };
 
 const tabsEl = document.getElementById("tabs") as HTMLElement;
@@ -19,13 +27,44 @@ const forwardBtn = document.getElementById("forward") as HTMLButtonElement;
 const reloadBtn = document.getElementById("reload") as HTMLButtonElement;
 const homeBtn = document.getElementById("home") as HTMLButtonElement;
 const newTabBtn = document.getElementById("new-tab") as HTMLButtonElement;
+const findBar = document.getElementById("find-bar") as HTMLElement;
+const findInput = document.getElementById("find-input") as HTMLInputElement;
+const findCount = document.getElementById("find-count") as HTMLElement;
+const findPrevBtn = document.getElementById("find-prev") as HTMLButtonElement;
+const findNextBtn = document.getElementById("find-next") as HTMLButtonElement;
+const findCloseBtn = document.getElementById("find-close") as HTMLButtonElement;
 
 let dragId: string | null = null;
+let findOpen = false;
 
 function applyState(state: WindowState): void {
   renderTabs(state.tabs);
   backBtn.disabled = !state.canGoBack;
   forwardBtn.disabled = !state.canGoForward;
+  applyFind(state.find);
+}
+
+function applyFind(find: FindState): void {
+  const wasOpen = findOpen;
+  findOpen = find.open;
+  findBar.hidden = !find.open;
+  if (find.open) {
+    if (document.activeElement !== findInput) {
+      if (findInput.value !== find.query) findInput.value = find.query;
+    }
+    if (find.query) {
+      findCount.textContent =
+        find.total > 0 ? `${find.active} of ${find.total}` : "0 of 0";
+    } else {
+      findCount.textContent = "";
+    }
+    if (!wasOpen) {
+      findInput.focus();
+      findInput.select();
+    }
+  } else if (wasOpen && document.activeElement === findInput) {
+    findInput.blur();
+  }
 }
 
 window.desktop.onState(applyState);
@@ -36,6 +75,37 @@ forwardBtn.addEventListener("click", () => window.desktop.goForward());
 reloadBtn.addEventListener("click", () => window.desktop.reload());
 homeBtn.addEventListener("click", () => window.desktop.goHome());
 newTabBtn.addEventListener("click", () => window.desktop.newTab());
+
+findInput.addEventListener("input", () => {
+  window.desktop.findQuery(findInput.value);
+});
+findInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    if (event.shiftKey) window.desktop.findPrev();
+    else window.desktop.findNext();
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    window.desktop.closeFind();
+  }
+});
+findPrevBtn.addEventListener("click", () => window.desktop.findPrev());
+findNextBtn.addEventListener("click", () => window.desktop.findNext());
+findCloseBtn.addEventListener("click", () => window.desktop.closeFind());
+
+document.addEventListener("keydown", (event) => {
+  const meta = event.metaKey || event.ctrlKey;
+  if (!meta) return;
+  const key = event.key.toLowerCase();
+  if (key === "f") {
+    event.preventDefault();
+    window.desktop.openFind();
+  } else if (key === "g") {
+    event.preventDefault();
+    if (event.shiftKey) window.desktop.findPrev();
+    else window.desktop.findNext();
+  }
+});
 
 function renderTabs(tabs: TabState[]): void {
   tabsEl.replaceChildren();

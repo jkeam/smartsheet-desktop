@@ -1,4 +1,5 @@
-import { HOME_URL } from "./types";
+/** Keep in sync with `HOME_URL` in `types.ts` (no import — keeps this file testable under Node ESM). */
+const HOME_URL = "https://app.smartsheet.com";
 
 const APP_HOSTS = new Set([
   "app.smartsheet.com",
