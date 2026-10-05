@@ -5,6 +5,7 @@ import {
   createWindow,
   newTabInFocusedWindow,
   persistNow,
+  prepareQuit,
   registerIpc,
   reloadActiveTab,
   restoreWindows,
@@ -32,7 +33,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
-  persistNow();
+  prepareQuit();
 });
 
 function buildMenu(): void {

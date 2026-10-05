@@ -46,53 +46,50 @@ const CHROME_HEIGHT = process.platform === "darwin" ? 52 : 44;
 
 const shells = new Map<number, ShellWindow>();
 let persistTimer: NodeJS.Timeout | null = null;
+let quitting = false;
 
 export function registerIpc(): void {
   ipcMain.handle("tabs:getState", (event) => {
-    const shellWin = shellFromEvent(event);
+    const shellWin = liveShellFromEvent(event);
     return shellWin ? windowState(shellWin) : { tabs: [], canGoBack: false, canGoForward: false };
   });
   ipcMain.on("tabs:new", (event, url?: string) => {
-    const shellWin = shellFromEvent(event);
+    const shellWin = liveShellFromEvent(event);
     if (shellWin) addTab(shellWin, normalizeAppUrl(url));
   });
   ipcMain.on("tabs:close", (event, tabId: string) => {
-    const shellWin = shellFromEvent(event);
+    const shellWin = liveShellFromEvent(event);
     if (shellWin) closeTab(shellWin, tabId);
   });
   ipcMain.on("tabs:activate", (event, tabId: string) => {
-    const shellWin = shellFromEvent(event);
+    const shellWin = liveShellFromEvent(event);
     if (shellWin) activateTab(shellWin, tabId);
   });
   ipcMain.on("tabs:reorder", (event, orderedIds: string[]) => {
-    const shellWin = shellFromEvent(event);
+    const shellWin = liveShellFromEvent(event);
     if (!shellWin) return;
     shellWin.tabs.sort((a, b) => orderedIds.indexOf(a.id) - orderedIds.indexOf(b.id));
     pushState(shellWin);
     schedulePersist();
   });
   ipcMain.on("tabs:home", (event) => {
-    const shellWin = shellFromEvent(event);
+    const shellWin = liveShellFromEvent(event);
     if (!shellWin) return;
     const active = activeTab(shellWin);
-    if (active) active.view.webContents.loadURL(HOME_URL);
+    if (active && viewLive(active.view)) active.view.webContents.loadURL(HOME_URL);
     else addTab(shellWin, HOME_URL);
   });
   ipcMain.on("tabs:reload", (event) => {
-    const tab = activeTab(shellFromEvent(event));
-    tab?.view.webContents.reload();
+    const tab = activeTab(liveShellFromEvent(event));
+    if (tab && viewLive(tab.view)) tab.view.webContents.reload();
   });
   ipcMain.on("tabs:back", (event) => {
-    const tab = activeTab(shellFromEvent(event));
-    if (tab?.view.webContents.navigationHistory.canGoBack()) {
-      tab.view.webContents.navigationHistory.goBack();
-    }
+    const tab = activeTab(liveShellFromEvent(event));
+    if (navigationFlag(tab, "canGoBack")) tab?.view.webContents.navigationHistory.goBack();
   });
   ipcMain.on("tabs:forward", (event) => {
-    const tab = activeTab(shellFromEvent(event));
-    if (tab?.view.webContents.navigationHistory.canGoForward()) {
-      tab.view.webContents.navigationHistory.goForward();
-    }
+    const tab = activeTab(liveShellFromEvent(event));
+    if (navigationFlag(tab, "canGoForward")) tab?.view.webContents.navigationHistory.goForward();
   });
   ipcMain.on("tabs:duplicate", (event, tabId: string) => {
     const shellWin = shellFromEvent(event);
@@ -168,9 +165,8 @@ export function createWindow(
 
   win.on("show", () => layout(shellWin));
   win.on("closed", () => {
-    for (const tab of shellWin.tabs) destroyTab(shellWin, tab);
-    destroyChrome(shellWin);
-    shells.delete(win.id);
+    // `win.id` throws after destroy; use the copy captured at create time.
+    shells.delete(shellWin.id);
     schedulePersist();
   });
   win.on("resize", () => layout(shellWin));
@@ -181,6 +177,7 @@ export function createWindow(
 
   void chromeView.webContents.loadFile(path.join(__dirname, "renderer", "index.html"));
   chromeView.webContents.on("did-finish-load", () => {
+    if (quitting || !windowLive(win)) return;
     layout(shellWin);
     pushState(shellWin);
     if (persisted?.isMaximized) win.maximize();
@@ -212,10 +209,23 @@ export function closeActiveTab(): void {
 }
 
 export function reloadActiveTab(): void {
-  activeTab(focusedShell())?.view.webContents.reload();
+  const tab = activeTab(focusedShell());
+  if (tab && viewLive(tab.view)) tab.view.webContents.reload();
 }
 
 export function persistNow(): void {
+  if (quitting) return;
+  saveSession(snapshot());
+}
+
+/** Persist while windows are still alive, then ignore teardown events. */
+export function prepareQuit(): void {
+  if (quitting) return;
+  quitting = true;
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+    persistTimer = null;
+  }
   saveSession(snapshot());
 }
 
@@ -223,11 +233,21 @@ function shellFromEvent(
   event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent
 ): ShellWindow | undefined {
   for (const shellWin of shells.values()) {
+    if (!viewLive(shellWin.chromeView)) continue;
     if (shellWin.chromeView.webContents.id === event.sender.id) {
       return shellWin;
     }
   }
   return undefined;
+}
+
+function liveShellFromEvent(
+  event: Electron.IpcMainEvent | Electron.IpcMainInvokeEvent
+): ShellWindow | undefined {
+  if (quitting) return undefined;
+  const shellWin = shellFromEvent(event);
+  if (!shellWin || !windowLive(shellWin.win)) return undefined;
+  return shellWin;
 }
 
 function focusedShell(): ShellWindow | undefined {
@@ -290,6 +310,16 @@ function addTab(
 function bindTabEvents(shellWin: ShellWindow, tab: Tab): void {
   const contents = tab.view.webContents;
 
+  const ifLive = (fn: () => void) => {
+    if (quitting || !windowLive(shellWin.win)) return;
+    try {
+      if (contents.isDestroyed()) return;
+    } catch {
+      return;
+    }
+    fn();
+  };
+
   contents.setWindowOpenHandler(({ url }) => {
     if (isSmartsheetAppUrl(url)) {
       addTab(shellWin, url);
@@ -311,34 +341,46 @@ function bindTabEvents(shellWin: ShellWindow, tab: Tab): void {
   });
 
   contents.on("page-title-updated", (_event, title) => {
-    tab.title = cleanTitle(title) || titleFromUrl(tab.url);
-    pushState(shellWin);
-    updateDockBadge();
+    ifLive(() => {
+      tab.title = cleanTitle(title) || titleFromUrl(tab.url);
+      pushState(shellWin);
+      updateDockBadge();
+    });
   });
   contents.on("page-favicon-updated", (_event, favicons) => {
-    tab.favicon = favicons[0] ?? null;
-    pushState(shellWin);
+    ifLive(() => {
+      tab.favicon = favicons[0] ?? null;
+      pushState(shellWin);
+    });
   });
   contents.on("did-start-loading", () => {
-    tab.loading = true;
-    pushState(shellWin);
+    ifLive(() => {
+      tab.loading = true;
+      pushState(shellWin);
+    });
   });
   contents.on("did-stop-loading", () => {
-    tab.loading = false;
-    tab.url = contents.getURL();
-    tab.title = cleanTitle(contents.getTitle()) || titleFromUrl(tab.url);
-    pushState(shellWin);
-    updateDockBadge();
+    ifLive(() => {
+      tab.loading = false;
+      tab.url = contents.getURL();
+      tab.title = cleanTitle(contents.getTitle()) || titleFromUrl(tab.url);
+      pushState(shellWin);
+      updateDockBadge();
+    });
   });
   contents.on("did-navigate", (_event, url) => {
-    tab.url = url;
-    pushState(shellWin);
-    schedulePersist();
+    ifLive(() => {
+      tab.url = url;
+      pushState(shellWin);
+      schedulePersist();
+    });
   });
   contents.on("did-navigate-in-page", (_event, url) => {
-    tab.url = url;
-    pushState(shellWin);
-    schedulePersist();
+    ifLive(() => {
+      tab.url = url;
+      pushState(shellWin);
+      schedulePersist();
+    });
   });
   contents.on("context-menu", (_event, params) => {
     const menu = Menu.buildFromTemplate([
@@ -427,10 +469,13 @@ function closeTab(shellWin: ShellWindow, tabId: string): void {
 
 function destroyTab(shellWin: ShellWindow, tab: Tab): void {
   try {
-    shellWin.win.contentView.removeChildView(tab.view);
+    if (windowLive(shellWin.win)) {
+      shellWin.win.contentView.removeChildView(tab.view);
+    }
   } catch {
     /* view may already be detached */
   }
+  if (!viewLive(tab.view)) return;
   try {
     tab.view.webContents.close({ waitForBeforeUnload: false });
   } catch {
@@ -439,9 +484,10 @@ function destroyTab(shellWin: ShellWindow, tab: Tab): void {
 }
 
 function activateTab(shellWin: ShellWindow, tabId: string): void {
+  if (quitting || !windowLive(shellWin.win)) return;
   shellWin.activeId = tabId;
   for (const tab of shellWin.tabs) {
-    tab.view.setVisible(tab.id === tabId);
+    if (viewLive(tab.view)) tab.view.setVisible(tab.id === tabId);
   }
   const active = shellWin.tabs.find((tab) => tab.id === tabId);
   if (active) {
@@ -459,27 +505,23 @@ function cycleTab(shellWin: ShellWindow, delta: number): void {
   if (tab) activateTab(shellWin, tab.id);
 }
 
-function destroyChrome(shellWin: ShellWindow): void {
-  try {
-    shellWin.win.contentView.removeChildView(shellWin.chromeView);
-  } catch {
-    /* view may already be detached */
-  }
-  try {
-    shellWin.chromeView.webContents.close({ waitForBeforeUnload: false });
-  } catch {
-    /* already gone */
-  }
-}
-
 function layout(shellWin: ShellWindow): void {
-  const [width, height] = shellWin.win.getContentSize();
-  shellWin.chromeView.setBounds({
-    x: 0,
-    y: 0,
-    width,
-    height: CHROME_HEIGHT,
-  });
+  if (quitting || !windowLive(shellWin.win)) return;
+  let width: number;
+  let height: number;
+  try {
+    [width, height] = shellWin.win.getContentSize();
+  } catch {
+    return;
+  }
+  if (viewLive(shellWin.chromeView)) {
+    shellWin.chromeView.setBounds({
+      x: 0,
+      y: 0,
+      width,
+      height: CHROME_HEIGHT,
+    });
+  }
 
   const tabBounds = {
     x: 0,
@@ -488,29 +530,63 @@ function layout(shellWin: ShellWindow): void {
     height: Math.max(0, height - CHROME_HEIGHT),
   };
   for (const tab of shellWin.tabs) {
-    tab.view.setBounds(tabBounds);
+    if (viewLive(tab.view)) tab.view.setBounds(tabBounds);
   }
 
   raiseChrome(shellWin);
 }
 
 function raiseChrome(shellWin: ShellWindow): void {
-  shellWin.win.contentView.removeChildView(shellWin.chromeView);
-  shellWin.win.contentView.addChildView(shellWin.chromeView);
+  if (quitting || !windowLive(shellWin.win) || !viewLive(shellWin.chromeView)) return;
+  try {
+    shellWin.win.contentView.removeChildView(shellWin.chromeView);
+    shellWin.win.contentView.addChildView(shellWin.chromeView);
+  } catch {
+    /* window is tearing down */
+  }
 }
 
 function windowState(shellWin: ShellWindow): WindowState {
   const active = activeTab(shellWin);
   return {
     tabs: shellWin.tabs.map((tab) => toState(tab, tab.id === shellWin.activeId)),
-    canGoBack: active?.view.webContents.navigationHistory.canGoBack() ?? false,
-    canGoForward: active?.view.webContents.navigationHistory.canGoForward() ?? false,
+    canGoBack: navigationFlag(active, "canGoBack"),
+    canGoForward: navigationFlag(active, "canGoForward"),
   };
 }
 
+function navigationFlag(tab: Tab | undefined, method: "canGoBack" | "canGoForward"): boolean {
+  if (!tab || !viewLive(tab.view)) return false;
+  try {
+    return tab.view.webContents.navigationHistory[method]();
+  } catch {
+    return false;
+  }
+}
+
 function pushState(shellWin: ShellWindow): void {
-  if (shellWin.win.isDestroyed()) return;
-  shellWin.chromeView.webContents.send("tabs:state", windowState(shellWin));
+  if (quitting || !windowLive(shellWin.win) || !viewLive(shellWin.chromeView)) return;
+  try {
+    shellWin.chromeView.webContents.send("tabs:state", windowState(shellWin));
+  } catch {
+    /* chrome view already gone */
+  }
+}
+
+function viewLive(view: WebContentsView): boolean {
+  try {
+    return !view.webContents.isDestroyed();
+  } catch {
+    return false;
+  }
+}
+
+function windowLive(win: BaseWindow): boolean {
+  try {
+    return !win.isDestroyed();
+  } catch {
+    return false;
+  }
 }
 
 function toState(tab: Tab, active: boolean): TabState {
@@ -529,32 +605,35 @@ function cleanTitle(title: string): string {
 }
 
 function schedulePersist(): void {
+  if (quitting) return;
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = setTimeout(() => persistNow(), 400);
 }
 
 function snapshot(): AppSession {
   return {
-    windows: [...shells.values()].map((shellWin) => {
-      const bounds = shellWin.win.getBounds();
-      return {
-        x: bounds.x,
-        y: bounds.y,
-        width: bounds.width,
-        height: bounds.height,
-        isMaximized: shellWin.win.isMaximized(),
-        tabs: shellWin.tabs.map((tab) => ({ url: tab.url })),
-        activeIndex: Math.max(
-          0,
-          shellWin.tabs.findIndex((t) => t.id === shellWin.activeId)
-        ),
-      };
-    }),
+    windows: [...shells.values()]
+      .filter((shellWin) => windowLive(shellWin.win))
+      .map((shellWin) => {
+        const bounds = shellWin.win.getBounds();
+        return {
+          x: bounds.x,
+          y: bounds.y,
+          width: bounds.width,
+          height: bounds.height,
+          isMaximized: shellWin.win.isMaximized(),
+          tabs: shellWin.tabs.map((tab) => ({ url: tab.url })),
+          activeIndex: Math.max(
+            0,
+            shellWin.tabs.findIndex((t) => t.id === shellWin.activeId)
+          ),
+        };
+      }),
   };
 }
 
 async function updateDockBadge(): Promise<void> {
-  if (process.platform !== "darwin") return;
+  if (quitting || process.platform !== "darwin") return;
   let total = 0;
   for (const shellWin of shells.values()) {
     for (const tab of shellWin.tabs) {
