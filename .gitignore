@@ -38,8 +38,12 @@ bower_components
 # Compiled binary addons (https://nodejs.org/api/addons.html)
 build/Release
 
-# Dependency directories
+# Compile, package, and dependencies — never commit
+dist/
+release/
 node_modules/
+
+# Dependency directories
 jspm_packages/
 
 # Snowpack dependency directory (https://snowpack.dev/)
@@ -83,7 +87,6 @@ out
 
 # Nuxt.js build / generate output
 .nuxt
-dist
 .output
 
 # Gatsby files
@@ -163,17 +166,24 @@ vite.config.ts.timestamp-*
 credentials.json
 secrets.json
 
-# Electron runtime data (cookies, login session, restored tabs)
+# Electron userData (cookies, login session, restored tabs, Chromium caches)
 session.json
 Cookies
 Cookies-journal
 Network Persistent State
+Preferences
+Secure Preferences
+Local State
+TransportSecurity
 Local Storage/
 IndexedDB/
 Session Storage/
+Service Worker/
+blob_storage/
 Cache/
 Code Cache/
 GPUCache/
+DawnCache/
 
 # Electron (https://github.com/electron/electron/blob/main/.gitignore)
 .gclient_done

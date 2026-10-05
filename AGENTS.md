@@ -7,11 +7,12 @@ This is not an official Smartsheet product. Do not add branding, APIs, or teleme
 ## Commands
 
 - Node 24 (`.nvmrc`). Use `nvm use` before install/run.
-- `npm install` — dependencies (`electron`, `typescript`, `@types/node`).
+- `npm install` — dependencies (`electron`, `electron-builder`, `typescript`, `@types/node`).
 - `npm run build` — `tsc` (main/preload) then `tsc -p tsconfig.renderer.json`, then copy `src/renderer/index.html` and `index.css` into `dist/renderer/`.
 - `npm start` / `npm run dev` — build, then launch Electron.
+- `npm run dist:mac` — compile, then electron-builder universal DMG + PKG into `release/` (do not use builder's default `dist/` output; that collides with `tsc`). App icon is `build/icon.png`.
 
-Do not commit `dist/`, `node_modules/`, or Electron `userData` artifacts (`session.json`, cookies, caches).
+Do not commit `dist/`, `release/`, `node_modules/`, or Electron `userData` artifacts (`session.json`, cookies, caches).
 
 ## Layout
 

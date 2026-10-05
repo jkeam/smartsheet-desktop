@@ -8,11 +8,52 @@
   "scripts": {
     "build": "tsc && tsc -p tsconfig.renderer.json && cp src/renderer/index.html src/renderer/index.css dist/renderer/",
     "start": "npm run build && electron .",
-    "dev": "npm start"
+    "dev": "npm start",
+    "dist:mac": "npm run build && electron-builder --mac --publish never"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",
     "electron": "^38.2.0",
+    "electron-builder": "^26.0.12",
     "typescript": "^5.9.2"
+  },
+  "build": {
+    "appId": "dev.keam.smartsheet-desktop",
+    "productName": "Smartsheet Desktop",
+    "copyright": "Copyright © Jon Keam",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "pkg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "${productName} ${version}"
+    },
+    "pkg": {
+      "installLocation": "/Applications",
+      "allowAnywhere": false,
+      "allowCurrentUserHome": false,
+      "isRelocatable": false
+    }
   }
 }

@@ -28,6 +28,21 @@ npm start
 
 `npm run build` compiles TypeScript to `dist/` without launching Electron. `npm run dev` is an alias for `npm start`.
 
+## macOS installer
+
+```bash
+nvm use
+npm install
+npm run dist:mac
+```
+
+Writes unsigned universal (Intel + Apple Silicon) installers to `release/`:
+
+- `Smartsheet Desktop-1.0.0-universal.dmg` — drag the app into Applications
+- `Smartsheet Desktop-1.0.0-universal.pkg` — standard installer into `/Applications`
+
+Gatekeeper will warn on first open (right-click → Open) because these builds are not Apple-signed or notarized. The Dock icon is a generic grid mark, not Smartsheet branding.
+
 ## Shortcuts
 
 | Action | Shortcut |
