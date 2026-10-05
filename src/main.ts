@@ -1,4 +1,6 @@
-import { BaseWindow, Menu, app, shell } from "electron";
+import { BaseWindow, Menu, app, nativeImage, shell } from "electron";
+import fs from "node:fs";
+import path from "node:path";
 import {
   activateLastTab,
   activateTabByIndex,
@@ -23,6 +25,7 @@ const isMac = process.platform === "darwin";
 app.setName("Smartsheet Desktop");
 
 app.whenReady().then(() => {
+  applyDevAppIcon();
   configureSession();
   registerIpc();
   buildMenu();
@@ -32,6 +35,17 @@ app.whenReady().then(() => {
     if (BaseWindow.getAllWindows().length === 0) createWindow();
   });
 });
+
+/** Packaged macOS builds get the Dock/About icon from electron-builder; npm start does not. */
+function applyDevAppIcon(): void {
+  if (app.isPackaged) return;
+  const iconPath = path.join(__dirname, "..", "build", "icon.png");
+  if (!fs.existsSync(iconPath)) return;
+  const image = nativeImage.createFromPath(iconPath);
+  if (image.isEmpty()) return;
+  if (isMac && app.dock) app.dock.setIcon(image);
+  app.setAboutPanelOptions({ iconPath });
+}
 
 app.on("window-all-closed", () => {
   persistNow();

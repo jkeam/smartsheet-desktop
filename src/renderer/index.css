@@ -128,7 +128,7 @@ body {
 }
 
 .tabs {
-  -webkit-app-region: no-drag;
+  -webkit-app-region: drag;
   flex: 1;
   display: flex;
   gap: 4px;
@@ -143,6 +143,7 @@ body {
 }
 
 .tab {
+  -webkit-app-region: no-drag;
   max-width: 220px;
   min-width: 92px;
   flex: 1 1 140px;

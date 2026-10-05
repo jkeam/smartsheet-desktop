@@ -6,6 +6,7 @@
   "author": "Jon Keam",
   "license": "MIT",
   "scripts": {
+    "clean": "rm -rf dist release",
     "build": "tsc && tsc -p tsconfig.renderer.json && cp src/renderer/index.html src/renderer/index.css src/renderer/error.html dist/renderer/",
     "start": "npm run build && electron .",
     "dev": "npm start",
