@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' https: data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    />
+    <title>Smartsheet Desktop</title>
+    <link rel="stylesheet" href="./index.css" />
+  </head>
+  <body>
+    <header class="chrome">
+      <div class="traffic-spacer"></div>
+      <button class="icon-btn" id="back" title="Back" aria-label="Back">
+        <svg viewBox="0 0 16 16" width="14" height="14"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="icon-btn" id="forward" title="Forward" aria-label="Forward">
+        <svg viewBox="0 0 16 16" width="14" height="14"><path d="M6 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="icon-btn" id="reload" title="Reload" aria-label="Reload">
+        <svg viewBox="0 0 16 16" width="14" height="14"><path d="M13 8a5 5 0 1 1-1.3-3.4M13 3v4H9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="icon-btn" id="home" title="Home" aria-label="Home">
+        <svg viewBox="0 0 16 16" width="14" height="14"><path d="M2.5 8 8 3l5.5 5M4 7.5V13h8V7.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <nav class="tabs" id="tabs" aria-label="Open items"></nav>
+      <button class="icon-btn add" id="new-tab" title="New tab" aria-label="New tab">+</button>
+    </header>
+    <script type="module" src="./index.js"></script>
+  </body>
+</html>
